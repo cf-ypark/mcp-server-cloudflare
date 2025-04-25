@@ -1,0 +1,50 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-24",
+	"compatibility_flags": ["nodejs_compat"],
+	"name": "mcp-cloudflare-workers-graphql-insights-dev",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MCP_OBJECT",
+				"class_name": "GraphQLInsightsMCP"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["GraphQLInsightsMCP"],
+			"tag": "v1"
+		}
+	],
+	"observability": {
+		"enabled": true
+	},
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV",
+			"id": "DEV_KV"
+		}
+	],
+	"vars": {
+		"ENVIRONMENT": "development",
+		"MCP_SERVER_NAME": "PLACEHOLDER",
+		"MCP_SERVER_VERSION": "PLACEHOLDER",
+		"CLOUDFLARE_CLIENT_ID": "PLACEHOLDER",
+		"CLOUDFLARE_CLIENT_SECRET": "PLACEHOLDER"
+	},
+	"dev": {
+		"port": 8976
+	},
+	"workers_dev": false,
+	"preview_urls": false,
+	"analytics_engine_datasets": [
+		{
+			"binding": "MCP_METRICS",
+			"dataset": "mcp-metrics-dev"
+		}
+	],
+  	"env": {
+	}
+}
