@@ -1,19 +1,23 @@
 import OAuthProvider from '@cloudflare/workers-oauth-provider'
-import { McpAgent } from 'agents/mcp'
-import { env } from 'cloudflare:workers'
 
 import {
 	createAuthHandlers,
 	handleTokenExchangeCallback,
 } from '@repo/mcp-common/src/cloudflare-oauth-handler'
+import { getEnv } from '@repo/mcp-common/src/env'
+import { RequiredScopes } from '@repo/mcp-common/src/scopes'
 import { MetricsTracker } from '@repo/mcp-observability'
 
 import { ContainerManager } from './containerManager'
 import { ContainerMcpAgent } from './containerMcp'
 
+import type { McpAgent } from 'agents/mcp'
 import type { AccountSchema, UserSchema } from '@repo/mcp-common/src/cloudflare-oauth-handler'
+import type { Env } from './context'
 
 export { ContainerManager, ContainerMcpAgent }
+
+const env = getEnv<Env>()
 
 const metrics = new MetricsTracker(env.MCP_METRICS, {
 	name: env.MCP_SERVER_NAME,
@@ -29,12 +33,10 @@ export type Props = {
 }
 
 const ContainerScopes = {
+	...RequiredScopes,
 	'account:read': 'See your account info such as account details, analytics, and memberships.',
-	'user:read': 'See your user info such as name, email address, and account memberships.',
 	'workers:write':
 		'See and change Cloudflare Workers data such as zones, KV storage, namespaces, scripts, and routes.',
-	'workers_observability:read': 'See observability logs for your account',
-	offline_access: 'Grants refresh tokens for long-lived access.',
 } as const
 
 export default {
@@ -58,7 +60,6 @@ export default {
 
 		return new OAuthProvider({
 			apiRoute: '/sse',
-			// @ts-ignore
 			apiHandler: ContainerMcpAgent.mount('/sse', { binding: 'CONTAINER_MCP_AGENT' }),
 			// @ts-ignore
 			defaultHandler: createAuthHandlers({ scopes: ContainerScopes, metrics }),

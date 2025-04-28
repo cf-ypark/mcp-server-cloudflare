@@ -1,4 +1,4 @@
-# GraphQL Insights MCP Server
+# GraphQL MCP Server
 
 This MCP server provides tools for interacting with Cloudflare's GraphQL API, allowing you to:
 
@@ -16,6 +16,7 @@ This MCP server provides tools for interacting with Cloudflare's GraphQL API, al
 ## Available Tools
 
 ### GraphQL Schema Exploration
+- `graphql_schema_search`: Search the Cloudflare GraphQL API schema for types, fields, and enum values matching a keyword
 - `graphql_schema_overview`: Fetch the high-level overview of the Cloudflare GraphQL API schema
 - `graphql_type_details`: Fetch detailed information about a specific GraphQL type
 - `graphql_schema`: Fetch the complete Cloudflare GraphQL API schema (combines overview and important type details)

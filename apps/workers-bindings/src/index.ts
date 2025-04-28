@@ -1,11 +1,13 @@
 import OAuthProvider from '@cloudflare/workers-oauth-provider'
 import { McpAgent } from 'agents/mcp'
-import { env } from 'cloudflare:workers'
 
 import {
 	createAuthHandlers,
 	handleTokenExchangeCallback,
 } from '@repo/mcp-common/src/cloudflare-oauth-handler'
+import { getUserDetails, UserDetails } from '@repo/mcp-common/src/durable-objects/user_details'
+import { getEnv } from '@repo/mcp-common/src/env'
+import { RequiredScopes } from '@repo/mcp-common/src/scopes'
 import { CloudflareMCPServer } from '@repo/mcp-common/src/server'
 import { registerAccountTools } from '@repo/mcp-common/src/tools/account'
 import { registerD1Tools } from '@repo/mcp-common/src/tools/d1'
@@ -15,6 +17,11 @@ import { registerWorkersTools } from '@repo/mcp-common/src/tools/worker'
 import { MetricsTracker } from '@repo/mcp-observability'
 
 import type { AccountSchema, UserSchema } from '@repo/mcp-common/src/cloudflare-oauth-handler'
+import type { Env } from './context'
+
+export { UserDetails }
+
+const env = getEnv<Env>()
 
 const metrics = new MetricsTracker(env.MCP_METRICS, {
 	name: env.MCP_SERVER_NAME,
@@ -54,9 +61,13 @@ export class WorkersBindingsMCP extends McpAgent<Env, WorkersBindingsMCPState, P
 	}
 
 	async init() {
-		this.server = new CloudflareMCPServer(this.props.user.id, this.env.MCP_METRICS, {
-			name: this.env.MCP_SERVER_NAME,
-			version: this.env.MCP_SERVER_VERSION,
+		this.server = new CloudflareMCPServer({
+			userId: this.props.user.id,
+			wae: this.env.MCP_METRICS,
+			serverInfo: {
+				name: this.env.MCP_SERVER_NAME,
+				version: this.env.MCP_SERVER_VERSION,
+			},
 		})
 
 		registerAccountTools(this)
@@ -65,42 +76,40 @@ export class WorkersBindingsMCP extends McpAgent<Env, WorkersBindingsMCPState, P
 		registerR2BucketTools(this)
 		registerD1Tools(this)
 	}
-	getActiveAccountId() {
-		// TODO: Figure out why this fail sometimes, and why we need to wrap this in a try catch
+
+	async getActiveAccountId() {
 		try {
-			return this.state.activeAccountId ?? null
+			// Get UserDetails Durable Object based off the userId and retrieve the activeAccountId from it
+			// we do this so we can persist activeAccountId across sessions
+			const userDetails = getUserDetails(env, this.props.user.id)
+			return await userDetails.getActiveAccountId()
 		} catch (e) {
+			this.server.recordError(e)
 			return null
 		}
 	}
 
-	setActiveAccountId(accountId: string) {
-		// TODO: Figure out why this fail sometimes, and why we need to wrap this in a try catch
+	async setActiveAccountId(accountId: string) {
 		try {
-			this.setState({
-				...this.state,
-				activeAccountId: accountId,
-			})
+			const userDetails = getUserDetails(env, this.props.user.id)
+			await userDetails.setActiveAccountId(accountId)
 		} catch (e) {
-			return null
+			this.server.recordError(e)
 		}
 	}
 }
 
 const BindingsScopes = {
+	...RequiredScopes,
 	'account:read': 'See your account info such as account details, analytics, and memberships.',
-	'user:read': 'See your user info such as name, email address, and account memberships.',
 	'workers:write':
 		'See and change Cloudflare Workers data such as zones, KV storage, namespaces, scripts, and routes.',
-	'workers_observability:read': 'See observability logs for your account',
 	'd1:write': 'Create, read, and write to D1 databases',
-	offline_access: 'Grants refresh tokens for long-lived access.',
 } as const
 
 // Export the OAuth handler as the default
 export default new OAuthProvider({
 	apiRoute: '/sse',
-	// @ts-ignore
 	apiHandler: WorkersBindingsMCP.mount('/sse'),
 	// @ts-ignore
 	defaultHandler: createAuthHandlers({ scopes: BindingsScopes, metrics }),

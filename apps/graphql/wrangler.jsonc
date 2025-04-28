@@ -3,18 +3,18 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-24",
 	"compatibility_flags": ["nodejs_compat"],
-	"name": "mcp-cloudflare-workers-graphql-insights-dev",
+	"name": "mcp-cloudflare-workers-graphql-dev",
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "MCP_OBJECT",
-				"class_name": "GraphQLInsightsMCP"
+				"class_name": "GraphQLMCP"
 			}
 		]
 	},
 	"migrations": [
 		{
-			"new_sqlite_classes": ["GraphQLInsightsMCP"],
+			"new_sqlite_classes": ["GraphQLMCP"],
 			"tag": "v1"
 		}
 	],
