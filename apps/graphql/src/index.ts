@@ -2,16 +2,18 @@ import OAuthProvider from '@cloudflare/workers-oauth-provider'
 import { McpAgent } from 'agents/mcp'
 
 import {
-  createAuthHandlers,
-  handleTokenExchangeCallback,
+	createAuthHandlers,
+	handleTokenExchangeCallback,
 } from '@repo/mcp-common/src/cloudflare-oauth-handler'
 import { getUserDetails, UserDetails } from '@repo/mcp-common/src/durable-objects/user_details'
 import { getEnv } from '@repo/mcp-common/src/env'
-import { registerAccountTools } from '@repo/mcp-common/src/tools/account'
-import { MetricsTracker } from '@repo/mcp-observability'
-import { registerGraphQLTools } from './tools/graphql'
 import { initSentryWithUser } from '@repo/mcp-common/src/sentry'
 import { CloudflareMCPServer } from '@repo/mcp-common/src/server'
+import { registerAccountTools } from '@repo/mcp-common/src/tools/account'
+import { registerZoneTools } from '@repo/mcp-common/src/tools/zone'
+import { MetricsTracker } from '@repo/mcp-observability'
+
+import { registerGraphQLTools } from './tools/graphql'
 
 import type { AccountSchema, UserSchema } from '@repo/mcp-common/src/cloudflare-oauth-handler'
 import type { Env } from './context'
@@ -62,14 +64,17 @@ export class GraphQLMCP extends McpAgent<Env, State, Props> {
 			userId: this.props.user.id,
 			wae: this.env.MCP_METRICS,
 			serverInfo: {
-			name: this.env.MCP_SERVER_NAME,
-			version: this.env.MCP_SERVER_VERSION,
+				name: this.env.MCP_SERVER_NAME,
+				version: this.env.MCP_SERVER_VERSION,
 			},
 			sentry: initSentryWithUser(env, this.ctx, this.props.user.id),
 		})
 
 		// Register account tools
 		registerAccountTools(this)
+
+		// Register zone tools
+		registerZoneTools(this)
 
 		// Register GraphQL tools
 		registerGraphQLTools(this)
@@ -113,7 +118,7 @@ export default new OAuthProvider({
 	authorizeEndpoint: '/oauth/authorize',
 	tokenEndpoint: '/token',
 	tokenExchangeCallback: (options) =>
-	handleTokenExchangeCallback(options, env.CLOUDFLARE_CLIENT_ID, env.CLOUDFLARE_CLIENT_SECRET),
+		handleTokenExchangeCallback(options, env.CLOUDFLARE_CLIENT_ID, env.CLOUDFLARE_CLIENT_SECRET),
 	// Cloudflare access token TTL
 	accessTokenTTL: 3600,
 	clientRegistrationEndpoint: '/register',
